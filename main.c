@@ -233,10 +233,10 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
              "<body>\n"
              "<h1>Monitoramento ambiente</h1>\n"
              "<h3>Temperatura: <span>%.2f</span> graus celcius</h3>\n"
-             "<h3>Humidade: <span>%.2f</span>%%</h3>\n"
+             "<h3>Umidade: <span>%.2f</span>%%</h3>\n"
              "<form action=\"./on_air\"><button>Ligar Ar</button></form>\n"
              "<form action=\"./off_air\"><button>Deligar Ar</button></form>\n"
-             "<p>Obs: dados de temperatura e humidade sao atualizados a cada 5 segundos</p>"
+             "<p>Obs: dados de temperatura e umidade sao atualizados a cada 5 segundos</p>"
              "</body>\n"
              "<script>setInterval(() => {location.href = '/'}, 5000)\n</script>"
              "</html>\n",
