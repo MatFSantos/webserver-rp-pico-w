@@ -59,4 +59,4 @@ Basta fazer essas configurações para ser possível fazer a execução do proje
 
 ## Links para acesso ao código e ao vídeo.  
 
-[Link do video ensaio]()
+[Link do video ensaio](https://youtu.be/tgz7Ovx1x6Q)
