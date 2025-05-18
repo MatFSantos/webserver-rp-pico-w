@@ -28,7 +28,7 @@
 static volatile double temperature = 0.0;
 static volatile double humidity = 0.0;
 const double critical_level_UP = 50.0; // critical level of the temperature
-const double critical_level_DOWN = 50.0;
+const double critical_level_DOWN = 0.0;
 ssd1306_t ssd;
 
 
