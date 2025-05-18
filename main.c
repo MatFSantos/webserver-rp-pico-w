@@ -327,26 +327,9 @@ void init_gpio() {
     gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
     gpio_pull_up(I2C_SCL);
 
-    /** initialize RGB LED */
-    pwm_init_(PIN_BLUE_LED);
-    pwm_setup(PIN_BLUE_LED, PWM_DIVISER, PWM_WRAP);
-    pwm_start(PIN_BLUE_LED, 0);
-
-    pwm_init_(PIN_RED_LED);
-    pwm_setup(PIN_RED_LED, PWM_DIVISER, PWM_WRAP);
-    pwm_start(PIN_RED_LED, 0);
-
-    pwm_init_(PIN_GREEN_LED);
-    pwm_setup(PIN_GREEN_LED, PWM_DIVISER, PWM_WRAP);
-    pwm_start(PIN_GREEN_LED, 0);
-
-    /** initialize button */
-    init_push_button(PIN_BUTTON_A);
-
-    /** initialize buzzer */
-    pwm_init_(BUZZER);
-    pwm_setup(BUZZER, PWM_DIVISER, PWM_WRAP);
-    pwm_start(BUZZER, 0);
+    /** initialize BLUE LED */
+    gpio_init(PIN_BLUE_LED);
+    gpio_set_dir(PIN_BLUE_LED, GPIO_OUT);
 }
 
 void update_display(char * message, uint8_t y, bool clear) {
