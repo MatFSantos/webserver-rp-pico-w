@@ -31,33 +31,97 @@ const double critical_level_UP = 50.0; // critical level of the temperature
 const double critical_level_DOWN = 50.0;
 ssd1306_t ssd;
 
-// Função de callback ao aceitar conexões TCP
+
+/**
+ * @brief Function callback to close tcp conection
+ *
+ * @param arg Additional argument to pass to the callback function (@see tcp_arg())
+ * @param tpcb The connection pcb for which data has been acknowledged
+ * @param len The amount of bytes acknowledged
+ * @return ERR_OK: try to send some data by calling tcp_output
+ *            Only return ERR_ABRT if you have called tcp_abort from within the
+ *            callback function!
+ */
+static err_t tcp_sent_callback(void *arg, struct tcp_pcb *tpcb, u16_t len);
+
+/**
+ * @brief Function callback called to accept tcp conection
+ *
+ * @param arg Additional argument to pass to the callback function (@see tcp_arg())
+ * @param newpcb The new connection pcb
+ * @param err An error code if there has been an error accepting.
+ *            Only return ERR_ABRT if you have called tcp_abort from within the
+ *            callback function!
+ * @return ERR_OK: try to send some data by calling tcp_output
+ *            Only return ERR_ABRT if you have called tcp_abort from within the
+ *            callback function!
+ */
 static err_t tcp_server_accept(void *arg, struct tcp_pcb *newpcb, err_t err);
 
-// Função de callback para processar requisições HTTP
+/**
+ * @brief Function to make the response string according GET route called
+ *
+ * @param request The received request data
+ * @param buffer point to buffer string that will be used to send data
+ * @param buffer_size buffer size
+ */
+void user_request(char **request, char *buffer, size_t buffer_size);
+
+/**
+ * @brief Function callback used to process the received request data
+ *
+ * @param arg Additional argument to pass to the callback function (@see tcp_arg())
+ * @param tpcb The connection pcb which received data
+ * @param p The received data (or NULL when the connection has been closed!)
+ * @param err An error code if there has been an error receiving
+ *            Only return ERR_ABRT if you have called tcp_abort from within the
+ *            callback function!
+ * @return ERR_OK: try to send some data by calling tcp_output
+ *            Only return ERR_ABRT if you have called tcp_abort from within the
+ *            callback function!
+ */
 static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err);
 
-// Tratamento do request do usuário
-void user_request(char **request);
-
-// Função para inicializar o display OLED
+/**
+ * @brief Initialize the SSD1306 display
+ *
+ */
 void init_display(void);
 
-// Função que inicia GPIOs usadas no projeto
+/**
+ * @brief Initialize the all GPIOs that will be used in project
+ *      - I2C;
+ *      - Blue LED;
+ */
 void init_gpio(void);
 
-// Função que atualiza informações no display OLED
+/**
+ * @brief Update the display informations
+ *
+ * @param message the message that will be ploted in display OLED
+ * @param y position on vertical that the message will be ploted
+ * @param clear if the display must be cleaned
+ *
+ */
 void update_display(char * message, uint8_t y, bool clear);
 
-// Função que lê o pino analógico da humidade
+/**
+ * @brief Function to read the humidity sensor
+ *
+ * @param channel analog channel to read
+ *
+ */
 void read_humidity(uint8_t channel);
 
-//Função que lê o pino analógico da temperatura
+/**
+ * @brief Function to read the temperature sensor
+ *
+ * @param channel analog channel to read
+ *
+ */
 void read_temperature(uint8_t channel);
 
-// Função principal
-int main()
-{
+int main() {
     // set clock freq to 128MHz
     bool ok = set_sys_clock_khz(128000, false);
     if (ok)
@@ -150,20 +214,17 @@ int main()
     return 0;
 }
 
-// -------------------------------------- Funções ---------------------------------
+// -------------------------------------- Functions --------------------------------- //
 
-static err_t tcp_sent_callback(void *arg, struct tcp_pcb *tpcb, u16_t len)
-{
+static err_t tcp_sent_callback(void *arg, struct tcp_pcb *tpcb, u16_t len) {
     tcp_close(tpcb); // fecha a conexão após o envio da resposta
     return ERR_OK;
 }
 
-// Função de callback ao aceitar conexões TCP
-static err_t tcp_server_accept(void *arg, struct tcp_pcb *newpcb, err_t err)
-{
-    tcp_recv(newpcb, tcp_server_recv);
-    tcp_sent(newpcb, tcp_sent_callback); // callback para envio
-    update_display("Dados enviados", 48, false);
+static err_t tcp_server_accept(void *arg, struct tcp_pcb *newpcb, err_t err) {
+    tcp_recv(newpcb, tcp_server_recv);   // callback to received
+    tcp_sent(newpcb, tcp_sent_callback); // callback to sent
+    update_display("   Data sent  ", 48, false);
     return ERR_OK;
 }
 
@@ -184,11 +245,8 @@ void user_request(char **request){
 };
 
 
-// Função de callback para processar requisições HTTP
-static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
-{
-    if (!p)
-    {
+static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
+    if (!p) {
         tcp_close(tpcb);
         tcp_recv(tpcb, NULL);
         return ERR_OK;
@@ -252,23 +310,13 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
     return ERR_OK;
 }
 
-/**
- * @brief Initialize the SSD1306 display
- *
- */
-void init_display()
-{
+void init_display() {
     ssd1306_init(&ssd, WIDTH, HEIGHT, false, I2C_ADDRESS, I2C_PORT);
     ssd1306_config(&ssd);
     ssd1306_send_data(&ssd);
 }
 
-/**
- * @brief Initialize the all GPIOs that will be used in project
- *      - I2C;
- */
-void init_gpio()
-{
+void init_gpio() {
     /** initialize i2c communication */
     int baudrate = 400 * 1000; // 400kHz baud rate for i2c communication
     i2c_init(I2C_PORT, baudrate);
@@ -301,11 +349,7 @@ void init_gpio()
     pwm_start(BUZZER, 0);
 }
 
-/**
- * @brief Update the display informations
- */
-void update_display(char * message, uint8_t y, bool clear)
-{
+void update_display(char * message, uint8_t y, bool clear) {
     if(clear)
         ssd1306_fill(&ssd, false);
     ssd1306_rect(&ssd, 0, 0, 128, 64, true, false);
@@ -313,27 +357,13 @@ void update_display(char * message, uint8_t y, bool clear)
     ssd1306_send_data(&ssd); // update display
 }
 
-/**
- * @brief Function to read the humidity sensor
- *
- * @param channel analog channel to read
- *
- */
-void read_humidity(uint8_t channel)
-{
+void read_humidity(uint8_t channel) {
     adc_select_input(channel);
     double value = (double)adc_read();
     humidity = 100 - (value * (100.0f / 4095.0f)); /* 100% indica nenhuma umidade, 0% indica umidade total*/
 }
 
-/**
- * @brief Function to read the temperature sensor
- *
- * @param channel analog channel to read
- *
- */
-void read_temperature(uint8_t channel)
-{
+void read_temperature(uint8_t channel) {
     adc_select_input(channel);
     double value = (double)adc_read();
     /*é adicionado um shift positivo de 1.4V, para que os valores em simulação sejam reais usando o potenciometro dos joysticks */
