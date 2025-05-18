@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Embarcatech - Monitoramento</title>
+    <style>
+      body {
+        background-color: #3b3b39;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        margin-top: 50px;
+        color: white;
+        display: flex;
+        justify-content: center;
+      }
+      p {
+        font-size: 12px;
+      }
+      h1{
+        font-size: 50px;
+        margin-bottom: 30px;
+      }
+      button {
+        background-color: LightGray;
+        font-size: 36px;
+        margin: 10px;
+        padding: 20px 40px;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+      #c{
+        background-color: #1f1f1e;
+        border: 1px solid white;
+        padding: 10px
+      }
+    </style>
+  </head>
+  <body>
+    <div id="c">
+      <h1>Monitoramento ambiente</h1>
+      <h3>Temperatura: <span id="t"></span> C</h3>
+      <h3>Umidade: <span id="h"></span>%</h3>
+      <h3>Status do dispositivo: <span id="ds"></span></h3>
+      <button id="d" onclick="sd()"></button>
+      <p>Obs: dados presentes na tela são atualizados a cada 5 segundo</p>
+    </div>
+    <script>
+      const d=document.getElementById('d');
+      const ds=document.getElementById('ds');
+      let v=(dt)=>{
+        if(dt){
+          d.textContent = 'Desligar';
+          ds.textContent = 'ligado';
+        } else{
+          d.textContent = 'Ligar';
+          ds.textContent = 'desligado';
+        }
+      }
+      let g=()=>{
+        fetch('http://192.168.1.121/data').then(r=>r.json()).then(j=>{ // mudar url do fetch
+          document.getElementById('t').textContent=j.temp;
+          document.getElementById('h').textContent=j.humd;
+          v(j.device);
+        });
+      }
+      setInterval(g,5000);
+      let sd=()=>{
+        fetch('http://192.168.1.121/device').then(r=>r.json()).then(j=>{ // mudar url do fetch
+          alert(j.status?'dispositivo ativado':'dispositivo desativado');
+          v(j.status);
+        })
+      }
+      g();
+    </script>
+  </body>
+</html>
