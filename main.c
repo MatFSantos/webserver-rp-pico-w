@@ -381,9 +381,8 @@ void update_display(char * message, uint8_t y, bool clear) {
         ssd1306_fill(&ssd, false);
     ssd1306_rect(&ssd, 0, 0, 128, 64, true, false);
     ssd1306_draw_string(&ssd, message, 64 - (strlen(message) * 4), y);
-    // monta resposta
-    char res[4096];
-    user_request(&request, res, 4096);
+    ssd1306_send_data(&ssd); // update display
+}
 
 void read_humidity(uint8_t channel) {
     adc_select_input(channel);
