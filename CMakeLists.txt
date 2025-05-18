@@ -24,8 +24,6 @@ target_link_libraries(${PROJECT_NAME}
     hardware_adc
     hardware_i2c
     hardware_clocks
-    hardware_timer
-    hardware_pwm
     pico_cyw43_arch_lwip_threadsafe_background
 )
 
@@ -41,8 +39,6 @@ target_sources(${PROJECT_NAME} PRIVATE
     ${PICO_SDK_PATH}/lib/lwip/src/apps/http/fs.c
     lib/ssd1306.c
     lib/led.c
-    lib/push_button.c
-    lib/pwm.c
 )
 
 pico_add_extra_outputs(${PROJECT_NAME})
