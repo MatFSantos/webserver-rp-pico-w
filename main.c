@@ -7,32 +7,24 @@
 #include "hardware/adc.h"
 #include "hardware/i2c.h"
 #include "hardware/clocks.h"
-#include "hardware/timer.h"
-#include "hardware/pwm.h"
 
 #include "lwip/pbuf.h"
 #include "lwip/tcp.h"
 #include "lwip/netif.h"
 
 #include "lib/ssd1306.h"
-#include "lib/pwm.h"
 #include "lib/led.h"
 
-#include "lib/push_button.h"
 
-// Credenciais WIFI 
+// WIFI credentials
 #include "credenciais.h"
 
-/** definições de pinos */
-#define BUZZER 21
-#define PWM_DIVISER 20
-#define PWM_WRAP 2000                 /* aprox 3.5kHz freq */
-#define HUMIDITY_SENSOR 27            /* eixo X */
-#define LM35 26                       /* eixo Y */
-#define LED_PIN CYW43_WL_GPIO_LED_PIN // GPIO do CI CYW43
+/** pin definitions */
+#define HUMIDITY_SENSOR 27            /* X axis */
+#define LM35 26                       /* Y axis */
+#define LED_PIN CYW43_WL_GPIO_LED_PIN /* LED of the rp pico w board */
 
-const double resoluion_humidity_sensor = 100.0f / 4095.0f; /* % por valor digital*/
-const double resolution = 3300.0f / 4095.0f;               /* resolução do ADC em mV*/
+/** global variables */
 static volatile double temperature = 0.0;
 static volatile double humidity = 0.0;
 ssd1306_t ssd;
