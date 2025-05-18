@@ -27,6 +27,8 @@
 /** global variables */
 static volatile double temperature = 0.0;
 static volatile double humidity = 0.0;
+const double critical_level_UP = 50.0; // critical level of the temperature
+const double critical_level_DOWN = 50.0;
 ssd1306_t ssd;
 
 // Função de callback ao aceitar conexões TCP
@@ -132,14 +134,14 @@ int main()
     adc_init();
     adc_set_temp_sensor_enabled(true);
 
-    while (true)
-    {
-        /* 
-        * Efetuar o processamento exigido pelo cyw43_driver ou pela stack TCP/IP.
-        * Este método deve ser chamado periodicamente a partir do ciclo principal 
-        * quando se utiliza um estilo de sondagem pico_cyw43_arch 
-        */
-        cyw43_arch_poll(); // Necessário para manter o Wi-Fi ativo
+    while (true) {
+        read_temperature(0);
+        read_humidity(1);
+        if (temperature >= critical_level_UP && !gpio_get(PIN_BLUE_LED)) // verifica nível crítico da temperatura
+            gpio_put(PIN_BLUE_LED, 1); 
+        if (temperature <= critical_level_DOWN && gpio_get(PIN_BLUE_LED))
+            gpio_put(PIN_BLUE_LED, 0);
+        cyw43_arch_poll();  // Necessário para manter o Wi-Fi ativo
         sleep_ms(100);      // Reduz o uso da CPU
     }
 
