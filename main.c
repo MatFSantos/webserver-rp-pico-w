@@ -228,22 +228,104 @@ static err_t tcp_server_accept(void *arg, struct tcp_pcb *newpcb, err_t err) {
     return ERR_OK;
 }
 
-// Tratamento do request do usuário - digite aqui
-void user_request(char **request){
-
-    if (strstr(*request, "GET /on_air") != NULL)
-    {
-        pwm_set_gpio_level(PIN_BLUE_LED, PWM_WRAP / 4);
-        pwm_set_gpio_level(PIN_RED_LED, PWM_WRAP / 4);
-        pwm_set_gpio_level(PIN_GREEN_LED, PWM_WRAP / 4);
-    } else if (strstr(*request, "GET /off_air") != NULL)
-    {
-        pwm_set_gpio_level(PIN_BLUE_LED, 0);
-        pwm_set_gpio_level(PIN_RED_LED, 0);
-        pwm_set_gpio_level(PIN_GREEN_LED, 0);
+void user_request(char **request, char *buffer, size_t buffer_size) {
+    if (strstr(*request, "GET /device") != NULL) { // rota para trocar o estado do dispositivo
+        gpio_put(PIN_BLUE_LED, !gpio_get(PIN_BLUE_LED));
+        char json[128];
+        snprintf(json, sizeof(json),"{\"status\":%s}",gpio_get(PIN_BLUE_LED) ? "true" : "false");
+        snprintf(buffer, buffer_size,
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/json\r\n"
+            "Access-Control-Allow-Origin: *\r\n"
+            "Content-Length: %lu\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+            "%s",
+            strlen(json), json
+        );
+    } else if (strstr(*request, "GET /data") != NULL) { // rota para capturar os dados que são mostrados na tela
+        char json[128];
+        snprintf(json, sizeof(json), "{\"temp\":%.2f,\"humd\":%.2f,\"device\":%s}", temperature, humidity, gpio_get(PIN_BLUE_LED) ? "true" : "false");
+        snprintf(buffer, buffer_size,
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/json\r\n"
+            "Access-Control-Allow-Origin: *\r\n"
+            "Content-Length: %lu\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+            "%s",
+            strlen(json), json
+        );
+    } else if (strstr(*request, "GET /") != NULL) { // rota home, para retorno da página html
+        snprintf(buffer, buffer_size,
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/html\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+            "<!DOCTYPE html>"
+            "<html>"
+            "<head>"
+            "<title>Embarcatech - Monitoramento</title>"
+            "<style>"
+            "body{background-color:#3b3b39;font-family:Arial,sans-serif;"
+            "text-align:center;margin-top:50px;color:white;display:flex;justify-content:center;}"
+            "h1{font-size:64px;margin-bottom:30px;}"
+            "button{background-color:LightGray;font-size:36px;margin:10px;"
+            "padding:20px 40px;border-radius:10px;cursor:pointer;}"
+            "p{font-size:12px}"
+            "#c{background-color:#1f1f1e;border:1px solid white;padding:10px;}"
+            "</style>"
+            "</head>"
+            "<body>"
+            "<div id=\"c\">"
+            "<h1>Monitoramento ambiente</h1>"
+            "<h3>Temperatura: <span id=\"t\"></span> C</h3>"
+            "<h3>Umidade: <span id=\"h\"></span>%%</h3>"
+            "<h3>Status do dispositivo: <span id=\"ds\"></span></h3>"
+            "<button id=\"d\" onclick=\"sd()\"></button>"
+            "<p>Obs: dados atualizados a cada 5 segundos</p>"
+            "</div>"
+            "<script>"
+            "const d=document.getElementById('d');"
+            "const ds=document.getElementById('ds');"
+            "let v=(dt)=>{"
+            "if(dt){"
+            "d.textContent = 'Desligar';"
+            "ds.textContent = 'ligado';"
+            "}else{"
+            "d.textContent = 'Ligar';"
+            "ds.textContent = 'desligado';"
+            "}};"
+            "let g=()=>{"
+            "fetch('./data').then(r=>r.json()).then(j=>{"
+            "document.getElementById('t').textContent=j.temp;"
+            "document.getElementById('h').textContent=j.humd;"
+            "v(j.device);"
+            "});};"
+            "setInterval(g,1000);"
+            "let sd=()=>{"
+            "fetch('./device').then(r=>r.json()).then(j=>{"
+            "alert(j.status?'dispositivo ativado':'dispositivo desativado');"
+            "v(j.status);"
+            "})};"
+            "g();"
+            "</script>"
+            "</body>"
+            "</html>"
+        );
+    } else { // caso não contre a rota chamada, retorna 404
+        const char *json = "{\"message\":\"Unknown route\"}";
+        snprintf(buffer, buffer_size, // Formatar uma string e armazená-la em um buffer de caracteres
+            "HTTP/1.1 404 NOT FOUND\r\n"
+            "Content-Type: application/json\r\n"
+            "Content-Length: %lu\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+            "%s",
+            strlen(json), json
+        );
     }
-};
-
+}
 
 static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err) {
     if (!p) {
@@ -258,54 +340,16 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
     request[p->len] = '\0';
 
     printf("Request: %s\n", request);
-    read_temperature(0);
-    read_humidity(1);
 
-    // Tratamento de request - Controle dos LEDs
-    user_request(&request);
+    // monta resposta
+    char res[4096];
+    user_request(&request, res, 4096);
 
-    // Cria a resposta HTML
-    char html[2048];
+    tcp_write(tpcb, res, strlen(res), TCP_WRITE_FLAG_COPY); // escreve para envio
+    tcp_output(tpcb); //envia dados
 
-    // Instruções html do webserver
-    snprintf(html, sizeof(html), // Formatar uma string e armazená-la em um buffer de caracteres
-             "HTTP/1.1 200 OK\r\n"
-             "Content-Type: text/html\r\n"
-             "\r\n"
-             "<!DOCTYPE html>\n"
-             "<html>\n"
-             "<head>\n"
-             "<title> Embarcatech - Monitoramento </title>\n"
-             "<style>\n"
-             "body { background-color:rgb(159, 234, 212); font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }\n"
-             "h1 { font-size: 64px; margin-bottom: 30px; }\n"
-             "button { background-color: LightGray; font-size: 36px; margin: 10px; padding: 20px 40px; border-radius: 10px; }\n"
-             "</style>\n"
-             "</head>\n"
-             "<body>\n"
-             "<h1>Monitoramento ambiente</h1>\n"
-             "<h3>Temperatura: <span>%.2f</span> graus celcius</h3>\n"
-             "<h3>Umidade: <span>%.2f</span>%%</h3>\n"
-             "<form action=\"./on_air\"><button>Ligar Ar</button></form>\n"
-             "<form action=\"./off_air\"><button>Deligar Ar</button></form>\n"
-             "<p>Obs: dados de temperatura e umidade sao atualizados a cada 5 segundos</p>"
-             "</body>\n"
-             "<script>setInterval(() => {location.href = '/'}, 5000)\n</script>"
-             "</html>\n",
-             temperature,
-             humidity);
-
-    // Escreve dados para envio (mas não os envia imediatamente).
-    tcp_write(tpcb, html, strlen(html), TCP_WRITE_FLAG_COPY);
-
-    // Envia a mensagem
-    tcp_output(tpcb);
-
-    //libera memória alocada dinamicamente
-    free(request);
-    
-    //libera um buffer de pacote (pbuf) que foi alocado anteriormente
-    pbuf_free(p);
+    free(request); // libera ponteiro alocado
+    pbuf_free(p); // libera um buffer de pacote (pbuf) alocado
 
     return ERR_OK;
 }
@@ -337,8 +381,9 @@ void update_display(char * message, uint8_t y, bool clear) {
         ssd1306_fill(&ssd, false);
     ssd1306_rect(&ssd, 0, 0, 128, 64, true, false);
     ssd1306_draw_string(&ssd, message, 64 - (strlen(message) * 4), y);
-    ssd1306_send_data(&ssd); // update display
-}
+    // monta resposta
+    char res[4096];
+    user_request(&request, res, 4096);
 
 void read_humidity(uint8_t channel) {
     adc_select_input(channel);
